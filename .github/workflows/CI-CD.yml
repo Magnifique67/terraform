@@ -43,7 +43,34 @@ jobs:
     needs: build  # Ensures this job runs after the build job
 
     steps:
-      - name: Deploy Microservice
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Log in to Amazon ECR
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}  # Use GitHub Secrets
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  # Use GitHub Secrets
+          AWS_DEFAULT_REGION: eu-north-1  # Specify your AWS region
         run: |
-          # Your deployment commands here
-          echo "Deploying microservice..."
+          echo "Logging in to Amazon ECR..."
+          aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin <your_ecr_account_id>.dkr.ecr.eu-north-1.amazonaws.com
+
+      - name: Build Docker image
+        run: |
+          echo "Building Docker image..."
+          docker build -t my-microservice:latest .
+
+      - name: Tag Docker image
+        run: |
+          echo "Tagging Docker image..."
+          docker tag my-microservice:latest 495599752149.dkr.ecr.eu-north-1.amazonaws.com/my-microservice:latest
+
+      - name: Push Docker image to ECR
+        run: |
+          echo "Pushing Docker image to ECR..."
+          docker push 495599752149.dkr.ecr.eu-north-1.amazonaws.com/my-microservice:latest
+
+      - name: Deploy to ECS
+        run: |
+          echo "Deploying to ECS..."
+          aws ecs update-service --cluster <your-cluster-name> --service <your-service-name> --force-new-deployment --region $AWS_DEFAULT_REGION
