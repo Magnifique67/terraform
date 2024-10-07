@@ -1,13 +1,16 @@
 provider "aws" {
   region  = "eu-north-1"
-  profile = "S3ReadOnlyUser"
+  # If you are using a CI/CD environment, remove the profile.
+  # Use the environment variables for AWS credentials instead.
+  access_key = var.AWS_ACCESS_KEY_ID
+  secret_key = var.AWS_SECRET_ACCESS_KEY
 }
 
 resource "aws_instance" "microservice_instance" {
   ami           = "ami-08eb150f611ca277f"  # Replace with a valid AMI for eu-north-1
   instance_type = "t3.micro"
 
-  iam_instance_profile = aws_iam_instance_profile.ec2_profile.name # Associate the IAM instance profile with the EC2 instance
+  iam_instance_profile = aws_iam_instance_profile.ec2_profile.name  # Associate the IAM instance profile
 
   tags = {
     Name = "MicroserviceInstance"
@@ -36,4 +39,17 @@ resource "aws_security_group" "allow_http" {
 resource "aws_iam_instance_profile" "ec2_profile" {
   name = "S3ReadOnlyUser"  # Use the name of your existing instance profile
   role = "EC2DynamoDBRole"  # Use the name of your existing IAM role
+}
+
+# Optionally, create an Elastic IP and associate it with the instance
+resource "aws_eip" "instance_eip" {
+  instance = aws_instance.microservice_instance.id
+}
+
+output "instance_id" {
+  value = aws_instance.microservice_instance.id
+}
+
+output "instance_public_ip" {
+  value = aws_eip.instance_eip.public_ip
 }
